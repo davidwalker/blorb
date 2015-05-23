@@ -16,7 +16,7 @@ int redPin = D0;
 int bluePin = D1;
 int greenPin = A1;
 
-int min = 3;
+int min = 0;
 int max = 255;
 int brightness = min;
 int fadeAmount = 1;
@@ -57,23 +57,7 @@ void setup() {
 
 void loop() {
 
-  Serial.println(greenPin);
-  analogWrite(greenPin, 255);
-  delay(1000);
-  analogWrite(greenPin, 0);
 
-  Serial.println(redPin);
-  analogWrite(redPin, 255);
-  delay(1000);
-  analogWrite(redPin, 0);
-
-  Serial.println(bluePin);
-  analogWrite(bluePin, 255);
-  delay(1000);
-  analogWrite(bluePin, 0);
-
-
-  if(false){
   sensorReading = analogRead(knockSensor);
 
   if(sensorReading < 2030 || sensorReading > 2050) {
@@ -99,9 +83,25 @@ void loop() {
   }
 
   delay(1);  // delay to avoid overloading the serial port buffer
-  }
 }
 
+void testleds(){
+  Serial.println(greenPin);
+  analogWrite(greenPin, 255);
+  delay(1000);
+  analogWrite(greenPin, 0);
+
+  Serial.println(redPin);
+  analogWrite(redPin, 255);
+  delay(1000);
+  analogWrite(redPin, 0);
+
+  Serial.println(bluePin);
+  analogWrite(bluePin, 255);
+  delay(1000);
+  analogWrite(bluePin, 0);
+
+}
 
 int setThreshold(String s)
 {
@@ -137,9 +137,9 @@ void animate(){
     cycles--;
   }
 
-  //analogWrite(redPin, brightness);
-  //analogWrite(greenPin, brightness);
-  //analogWrite(bluePin, brightness);
+  analogWrite(redPin, brightness);
+  analogWrite(greenPin, brightness);
+  analogWrite(bluePin, brightness);
 }
 
 
