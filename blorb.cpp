@@ -51,12 +51,49 @@ Frame::Frame(long t, int r, int g, int b){
   color[2] = b;
 }
 
-
 Frame breath[3] = {
   Frame(0, 0,0,0),
   Frame(1000, 255, 255, 255),
   Frame(2000, 0,0,0)
 };
+
+Frame flash[5] = {
+  Frame(1, 255,0,0),
+  Frame(999, 255,0,0),
+  Frame(1000, 0, 255, 0),
+  Frame(1999, 0, 255, 0),
+  Frame(2000, 255, 0, 0)
+};
+
+Frame rain[7] = {
+  Frame(0, 0,0,0),
+  Frame(1000, 255, 255, 255),
+  Frame(2000, 0,0,0),
+  Frame(3000, 255, 0, 0),
+  Frame(4000, 0, 255, 0),
+  Frame(5000, 0, 0, 255),
+  Frame(6000, 0, 0, 0)
+};
+
+Frame slowBreath[3] = {
+  Frame(0, 0,0,0),
+  Frame(2000, 255, 255, 255),
+  Frame(4000, 0,0,0)
+};
+
+Frame crazy[5] = {
+  Frame(0, 0,0,0),
+  Frame(250, 0, 255, 0),
+  Frame(500, 0,0,0),
+  Frame(750, 255, 0, 0),
+  Frame(1000, 0,0,0)
+};
+
+// todo:
+//
+// slow breathing
+// constant on when picked up
+// 
 
 
 class LedAnimator{
@@ -70,12 +107,15 @@ class LedAnimator{
 
     int pins[3] = {0,0,0};
 
+    int cycles = -1;
+
     void update();
 
   public:
     LedAnimator(int redPin, int greenPin, int bluePin);
-    void startAnimation(Frame* frames, int frameCount);
+    void startAnimation(Frame* frames, int frameCount, int cycleCount);
     void step();
+    bool running();
 };
 
 LedAnimator::LedAnimator(int redPin, int greenPin, int bluePin){
@@ -94,28 +134,36 @@ void LedAnimator::update(){
   }
 }
 
-void LedAnimator::startAnimation(Frame* frames, int frameCount){
+void LedAnimator::startAnimation(Frame* frames, int frameCount, int cycleCount){
   currentAnimation = frames;
   startFrameTime = millis();
   nextFrame = 0;
   numFrames = frameCount;
+  cycles = cycleCount;
   for (int i = 0; i < 3 ; i++){
-    startBrightness[i] = currentBrightness[i];
+    startBrightness[i] = currentBrightness[i] = frames[0].color[i];
   }
   step();
 }
 
+bool LedAnimator::running(){
+  return cycles != 0;
+}
+
 void LedAnimator::step(){
-  Serial.println("step");
+  if(!running()){
+    return;
+  }
+  //Serial.println("step");
   long currentTime = millis();
   long targetTime = currentAnimation[nextFrame].time;
   bool advance = false;
 
   long timeSinceStart = currentTime - startFrameTime;
-  Serial.println(timeSinceStart);
+  //Serial.println(timeSinceStart);
   if(timeSinceStart >= targetTime)
   {
-    Serial.println("advance");
+    //Serial.println("advance");
     advance = true;
     timeSinceStart = targetTime;
   }
@@ -128,8 +176,8 @@ void LedAnimator::step(){
 
   update();
 
-  Serial.println("b");
-  Serial.println(pins[0]);
+  // Serial.println("b");
+  // Serial.println(pins[0]);
 
   if(advance)
   {
@@ -137,12 +185,14 @@ void LedAnimator::step(){
     startFrameTime = currentTime;
     if(nextFrame >= numFrames) {
       nextFrame = 0;
+      if(cycles>0)
+        cycles--;
     }
     for (int i = 0; i < 3 ; i++){
       startBrightness[i] = currentBrightness[i];
     }
-    Serial.println("frame");
-    Serial.println(nextFrame);
+    // Serial.println("frame");
+    // Serial.println(nextFrame);
   }
 }
 
@@ -179,8 +229,8 @@ void setup() {
 
  Serial.begin(9600);       // use the serial port
 
- delay(10000);
- Serial.println("Starting in 10...");
+ delay(1000);
+ Serial.println("Starting...");
 
  Serial.println(breath[1].time);
  Serial.println(breath[1].color[0]);
@@ -188,48 +238,36 @@ void setup() {
  Serial.println(breath[1].color[2]);
  Serial.println("length");
  Serial.println(sizeof(breath));
- 
 
- delay(10000);
- 
-
-
- led.startAnimation(breath, 3);
 
  testDiff();
 }
 
 void loop() {
+  if(!led.running()){
+   led.startAnimation(breath, 3, -1);
+  }
   led.step();
 
-  delay(10);
-  //
-  //
-  // sensorReading = analogRead(knockSensor);
-  //
-  // if(sensorReading < 2030 || sensorReading > 2050) {
-  //   Serial.println(sensorReading);
-  // }
-  //
-  // // if the sensor reading is greater than the threshold:
-  // if (sensorReading <= threshold) {
-  //   // toggle the status of the ledPin:
-  //   ledState = !ledState;
-  //   // update the LED pin itself:
-  //   digitalWrite(ledPin, ledState);
-  //   // send the string "Knock!" back to the computer, followed by newline
-  //   //trigger = true;
-  //   Serial.println("Knock!");
-  //   if(cycles == 0) {
-  //     cycles = 6;
-  //   }
-  // }
-  //
-  // if(cycles > 0){
-  //   //animate();
-  // }
-  //
-  // delay(1);  // delay to avoid overloading the serial port buffer
+  sensorReading = analogRead(knockSensor);
+
+  if(sensorReading < 2030 || sensorReading > 2050) {
+    Serial.println(sensorReading);
+  }
+
+  // if the sensor reading is greater than the threshold:
+  if (sensorReading <= threshold) {
+    // toggle the status of the ledPin:
+    ledState = !ledState;
+    // update the LED pin itself:
+    digitalWrite(ledPin, ledState);
+    // send the string "Knock!" back to the computer, followed by newline
+    //trigger = true;
+    Serial.println("Knock!");
+    led.startAnimation(crazy, 5, 4);
+  }
+
+  delay(1);  // delay to avoid overloading the serial port buffer
 }
 
 void testleds(){
