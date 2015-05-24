@@ -11,6 +11,17 @@ LedAnimator::LedAnimator(int redPin, int greenPin, int bluePin){
   update();
 }
 
+void LedAnimator::setColor(int r, int g, int b){
+  currentBrightness[0] = r;
+  currentBrightness[1] = g;
+  currentBrightness[2] = b;
+  update();
+}
+
+void LedAnimator::stop(){
+  cycles = 0;
+}
+
 void LedAnimator::update(){
   for (int i = 0; i < 3 ; i++){
     analogWrite(pins[i], currentBrightness[i]);
@@ -45,11 +56,11 @@ void LedAnimator::step(){
   if(timeSinceStart >= targetTime)
   {
     // reached end time for current frame so advance
-    Serial.println("advance");
-    Serial.println(currentFrame);
+    // Serial.println("advance");
+    // Serial.println(currentFrame);
     for (int i = 0; i < 3 ; i++){
       startBrightness[i] = currentBrightness[i] = currentAnimation[currentFrame].color[i];
-      Serial.println(startBrightness[i]);
+      // Serial.println(startBrightness[i]);
     }
     update();
     currentFrame++;

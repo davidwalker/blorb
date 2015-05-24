@@ -7,11 +7,12 @@
 // these constants won't change:
 int ledPin = D7;      // led connected to digital pin 13
 int knockSensor = A0; // the piezo is connected to analog pin 0
-int threshold = 2000;  // threshold value to decide when the detected sound is a knock or not
+int threshold = 1000;  // threshold value to decide when the detected sound is a knock or not
 
 
 // these variables will change:
 int sensorReading = 0;      // variable to store the value read from the sensor pin
+int motionDiff = 0;
 int ledState = LOW;         // variable used to store the last LED status, to toggle the light
 
 
@@ -28,6 +29,11 @@ int divider = 0;
 int divLimit = 0;
 
 int cycles = 2;
+
+int basePin = A2;
+int baseProximity = 0;
+bool baseInRange = false;
+bool onBase = false;
 
 
 Frame breath[3] = {
@@ -114,13 +120,19 @@ int setMin(String s);
 int setMax(String s);
 int setDivLimit(String s);
 void detectKnock(void);
+void detectBase(void);
 void animate(void);
 
 void testDiff(void);
 
 void setup() {
   Spark.variable("sensor", &sensorReading, INT);
+  Spark.variable("motionDiff", &motionDiff, INT);
   Spark.variable("threshold", &threshold, INT);
+  Spark.variable("baseProximity", &baseProximity, INT);
+  Spark.variable("onBase", &onBase, INT); 
+  Spark.variable("baseInRange", &baseInRange, INT);
+
   Spark.function("setThreshold", setThreshold);
   pinMode(ledPin, OUTPUT);
   pinMode(knockSensor, INPUT);
@@ -128,6 +140,8 @@ void setup() {
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
+
+  pinMode(basePin, INPUT_PULLDOWN);
 
   Serial.begin(9600);
 
@@ -142,30 +156,62 @@ void setup() {
 }
 
 void loop() {
-  if(!led.running()){
-   led.startAnimation(slowBreath, 3, -1);
+  detectBase();
+
+  if(baseInRange) {
+    if(onBase ) {
+      Serial.println("on base");
+      if(!led.running()){
+        led.startAnimation(slowBreath, 3, -1);
+      }
+    } else{
+      Serial.println("in range but not on");
+      int onBaseThreshold = 4000;
+      int brightness = (baseProximity / onBaseThreshold) * 255;
+      led.stop();
+      led.setColor(brightness ,brightness ,brightness );
+    }
+  } else {
+    Serial.println("base not in range");
+    detectKnock();
+    if(!led.running()){
+      Serial.println("anim not running");
+      led.startAnimation(slowBreath, 3, -1);
+    }
   }
+
   led.step();
 
-  detectKnock();
-
-  delay(1);
+  delay(10);
 }
 
 void detectKnock(){
-  sensorReading = analogRead(knockSensor);
+  int newReading  = analogRead(knockSensor);
 
-  if(sensorReading < 2030 || sensorReading > 2050) {
-    Serial.println(sensorReading);
-  }
+  motionDiff = newReading - sensorReading;
+  motionDiff = motionDiff < 0 ? -motionDiff : motionDiff;
 
-  if (sensorReading <= threshold) {
+  if (motionDiff >= threshold) {
     ledState = !ledState;
     digitalWrite(ledPin, ledState);
     Serial.println("Knock!");
+    Serial.println(motionDiff);
     // start monster detection
     led.startAnimation(crazy, CRAZY_SIZE, 1);
   }
+  sensorReading = newReading;
+}
+
+void detectBase(){
+  baseProximity = analogRead(basePin);
+
+  baseInRange = baseProximity > 100;
+  onBase = baseProximity  > 4000;
+
+  // Serial.println("Base");
+  // Serial.println(baseProximity);
+  // Serial.println(baseInRange);
+  // Serial.println(onBase);
 }
 
 int setThreshold(String s)

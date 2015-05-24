@@ -23,6 +23,8 @@ class LedAnimator{
     void startAnimation(Frame* frames, int frameCount, int cycleCount);
     void step();
     bool running();
+    void setColor(int r, int g, int b);
+    void stop();
 };
 
 #endif
