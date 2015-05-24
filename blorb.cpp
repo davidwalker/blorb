@@ -1,5 +1,7 @@
-#include <application.h>
+#include "application.h"
 #include "Timer.h"
+#include "Frame.h"
+#include "LedAnimator.h"
 
 
 // these constants won't change:
@@ -28,33 +30,10 @@ int divLimit = 0;
 int cycles = 2;
 
 
-// int breath = {
-//   {    0,   0,   0,   0},
-//   { 1000, 255,   0,   0},
-//   { 2000,   0,   0,   0}
-// };
-//
-//
-
-
-class Frame {
-  public:
-    Frame(long time, int r, int g, int b);
-    long time;
-    int color[3];
-};
-
-Frame::Frame(long t, int r, int g, int b){
-  time = t;
-  color[0] = r;
-  color[1] = g;
-  color[2] = b;
-}
-
 Frame breath[3] = {
   Frame(0, 0,0,0),
   Frame(1000, 255, 255, 255),
-  Frame(2000, 0,0,0)
+  Frame(1000, 0,0,0)
 };
 
 Frame flash[5] = {
@@ -65,27 +44,59 @@ Frame flash[5] = {
   Frame(2000, 255, 0, 0)
 };
 
-Frame rain[7] = {
+int const RAIN_SIZE = 13;
+Frame rain[RAIN_SIZE] = {
   Frame(0, 0,0,0),
   Frame(1000, 255, 255, 255),
-  Frame(2000, 0,0,0),
-  Frame(3000, 255, 0, 0),
-  Frame(4000, 0, 255, 0),
-  Frame(5000, 0, 0, 255),
-  Frame(6000, 0, 0, 0)
+  Frame(1000, 0,0,0),
+  Frame(1000, 255, 0, 0),
+  Frame(1000, 0,0,0),
+  Frame(1000, 0, 255, 0),
+  Frame(1000, 0,0,0),
+  Frame(1000, 0, 0, 255),
+  Frame(1000, 0, 0, 0),
+  Frame(1000, 255, 0, 0),
+  Frame(1000, 0, 255, 0),
+  Frame(1000, 0, 0, 255),
+  Frame(1000, 0, 0, 0)
 };
 
 Frame slowBreath[3] = {
   Frame(0, 0,0,0),
   Frame(2000, 255, 255, 255),
-  Frame(4000, 0,0,0)
+  Frame(2000, 0,0,0)
 };
 
-Frame crazy[5] = {
+int const CRAZY_SPEED = 100;
+int const CRAZY_SIZE = 26;
+Frame crazy[CRAZY_SIZE] = {
   Frame(0, 0,0,0),
-  Frame(250, 0, 255, 0),
-  Frame(500, 0,0,0),
-  Frame(750, 255, 0, 0),
+  // flash red/green for a while
+  Frame(CRAZY_SPEED, 0, 255, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 255, 0, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 0, 255, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 255, 0, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 0, 255, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 255, 0, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 0, 255, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 255, 0, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 0, 255, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(CRAZY_SPEED, 255, 0, 0),
+  Frame(CRAZY_SPEED, 0,0,0),
+  Frame(1000, 0,0,0),
+  // then green for all clear
+  Frame(CRAZY_SPEED, 0,255,0),
+  Frame(2000, 0,255,0),
+  Frame(CRAZY_SPEED, 0,0,0),
   Frame(1000, 0,0,0)
 };
 
@@ -96,106 +107,6 @@ Frame crazy[5] = {
 // 
 
 
-class LedAnimator{
-  private:
-    int nextFrame = 0;
-    long startFrameTime;
-    Frame* currentAnimation;
-    int numFrames;
-    int currentBrightness[3] = {0,0,0};
-    int startBrightness[3] = {0,0,0};
-
-    int pins[3] = {0,0,0};
-
-    int cycles = -1;
-
-    void update();
-
-  public:
-    LedAnimator(int redPin, int greenPin, int bluePin);
-    void startAnimation(Frame* frames, int frameCount, int cycleCount);
-    void step();
-    bool running();
-};
-
-LedAnimator::LedAnimator(int redPin, int greenPin, int bluePin){
-  pins[0] = redPin;
-  pins[1] = greenPin;
-  pins[2] = bluePin;
-  pinMode(redPin, OUTPUT);
-  pinMode(greenPin, OUTPUT);
-  pinMode(bluePin, OUTPUT);
-  update();
-}
-
-void LedAnimator::update(){
-  for (int i = 0; i < 3 ; i++){
-    analogWrite(pins[i], currentBrightness[i]);
-  }
-}
-
-void LedAnimator::startAnimation(Frame* frames, int frameCount, int cycleCount){
-  currentAnimation = frames;
-  startFrameTime = millis();
-  nextFrame = 0;
-  numFrames = frameCount;
-  cycles = cycleCount;
-  for (int i = 0; i < 3 ; i++){
-    startBrightness[i] = currentBrightness[i] = frames[0].color[i];
-  }
-  step();
-}
-
-bool LedAnimator::running(){
-  return cycles != 0;
-}
-
-void LedAnimator::step(){
-  if(!running()){
-    return;
-  }
-  //Serial.println("step");
-  long currentTime = millis();
-  long targetTime = currentAnimation[nextFrame].time;
-  bool advance = false;
-
-  long timeSinceStart = currentTime - startFrameTime;
-  //Serial.println(timeSinceStart);
-  if(timeSinceStart >= targetTime)
-  {
-    //Serial.println("advance");
-    advance = true;
-    timeSinceStart = targetTime;
-  }
-
-  for (int i = 0; i < 3 ; i++){
-    int targetBrightness = currentAnimation[nextFrame].color[i];
-    int desiredBrightness = (targetBrightness - startBrightness[i]) * ((float)timeSinceStart / (float)targetTime);
-    currentBrightness[i] = desiredBrightness;
-  }
-
-  update();
-
-  // Serial.println("b");
-  // Serial.println(pins[0]);
-
-  if(advance)
-  {
-    nextFrame++;
-    startFrameTime = currentTime;
-    if(nextFrame >= numFrames) {
-      nextFrame = 0;
-      if(cycles>0)
-        cycles--;
-    }
-    for (int i = 0; i < 3 ; i++){
-      startBrightness[i] = currentBrightness[i];
-    }
-    // Serial.println("frame");
-    // Serial.println(nextFrame);
-  }
-}
-
 
 LedAnimator led = LedAnimator(redPin,greenPin,bluePin);
 
@@ -203,8 +114,8 @@ int setThreshold(String s);
 int setMin(String s);
 int setMax(String s);
 int setDivLimit(String s);
+void detectKnock(void);
 void animate(void);
-
 
 void testDiff(void);
 
@@ -240,15 +151,28 @@ void setup() {
  Serial.println(sizeof(breath));
 
 
- testDiff();
+  led.startAnimation(breath, 3, 1);
+  while(led.running()) { 
+    delay(10);
+    led.step();
+  }
+
+  sensorReading = analogRead(knockSensor);
+ //testDiff();
 }
 
 void loop() {
   if(!led.running()){
-   led.startAnimation(breath, 3, -1);
+   led.startAnimation(slowBreath, 3, -1);
   }
   led.step();
 
+  detectKnock();
+
+  delay(1);
+}
+
+void detectKnock(){
   sensorReading = analogRead(knockSensor);
 
   if(sensorReading < 2030 || sensorReading > 2050) {
@@ -264,10 +188,8 @@ void loop() {
     // send the string "Knock!" back to the computer, followed by newline
     //trigger = true;
     Serial.println("Knock!");
-    led.startAnimation(crazy, 5, 4);
+    led.startAnimation(crazy, CRAZY_SIZE, 1);
   }
-
-  delay(1);  // delay to avoid overloading the serial port buffer
 }
 
 void testleds(){
