@@ -38,8 +38,8 @@ bool onBase = false;
 
 Frame breath[3] = {
   Frame(0, 0,0,0),
-  Frame(1000, 255, 255, 255),
-  Frame(1000, 0,0,0)
+  Frame(500, 255, 255, 255),
+  Frame(500, 0,0,0)
 };
 
 Frame flash[5] = {
@@ -176,7 +176,7 @@ void loop() {
     detectKnock();
     if(!led.running()){
       Serial.println("anim not running");
-      led.startAnimation(slowBreath, 3, -1);
+      led.startAnimation(breath, 3, -1);
     }
   }
 
